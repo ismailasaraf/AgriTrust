@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Enum, Text
+from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Enum, Text, Boolean, JSON
 from sqlalchemy.orm import relationship
 from datetime import datetime
 import enum
@@ -23,17 +23,9 @@ class Farmer(Base):
     name = Column(String(255), nullable=False)
     phone = Column(String(20), unique=True, nullable=False, index=True)
     email = Column(String(255), unique=True, nullable=True)
-    village = Column(String(255), nullable=True)
     address = Column(Text, nullable=True)
-    farming_type = Column(String(100), nullable=True)
     land_size_acres = Column(Float, nullable=True)
-    land_details = Column(Text, nullable=True)
-    crop_type = Column(String(255), nullable=True)
-    crops_cultivated = Column(Text, nullable=True)
-    approx_production = Column(String(255), nullable=True)
-    fpo_membership = Column(String(255), nullable=True)
-    previous_farming_history = Column(Text, nullable=True)
-    market_sold_to = Column(String(255), nullable=True)
+    crop_type = Column(String(100), nullable=True)
     organization_id = Column(Integer, ForeignKey("organizations.id"), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -41,6 +33,7 @@ class Farmer(Base):
     # Relationships
     organization = relationship("Organization", back_populates="farmers")
     loans = relationship("Loan", back_populates="farmer", cascade="all, delete-orphan")
+    assessments = relationship("LoanAssessment", back_populates="farmer", cascade="all, delete-orphan")
 
 
 class Organization(Base):
@@ -81,3 +74,44 @@ class Loan(Base):
 
     # Relationships
     farmer = relationship("Farmer", back_populates="loans")
+
+
+class LoanAssessment(Base):
+    """AI-generated loan assessment for a farmer+loan application"""
+    __tablename__ = "loan_assessments"
+
+    id = Column(Integer, primary_key=True, index=True)
+    farmer_id = Column(Integer, ForeignKey("farmers.id"), nullable=False)
+    loan_amount = Column(Float, nullable=False)
+    crop_type = Column(String(100), nullable=False)
+    land_size_acres = Column(Float, nullable=False)
+
+    # AI Data Sources
+    market_price_per_quintal = Column(Float, nullable=True)       # AGMARKNET
+    rainfall_mm = Column(Float, nullable=True)                    # Weather data
+    weather_risk_score = Column(Float, nullable=True)             # 0-100
+    insurance_risk_score = Column(Float, nullable=True)           # PMFBY
+    disease_risk_score = Column(Float, nullable=True)             # ICAR Deep Learning
+
+    # AI Analysis
+    estimated_yield_quintals = Column(Float, nullable=True)
+    projected_revenue = Column(Float, nullable=True)
+    projected_profit = Column(Float, nullable=True)
+    projected_loss = Column(Float, nullable=True)
+    seasonal_risk = Column(String(20), nullable=True)             # Low / Medium / High
+    credit_score = Column(Integer, nullable=True)                 # 300-900
+    recommendation = Column(String(20), nullable=True)            # Approve / Review / Reject
+    ai_notes = Column(Text, nullable=True)
+
+    # Document lifecycle
+    document_generated = Column(Boolean, default=False)
+    farmer_accepted = Column(Boolean, default=False)
+    farmer_accepted_at = Column(DateTime, nullable=True)
+    loan_id = Column(Integer, ForeignKey("loans.id"), nullable=True)   # Set after auto-approval
+
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relationships
+    farmer = relationship("Farmer", back_populates="assessments")
+    loan = relationship("Loan", foreign_keys=[loan_id])

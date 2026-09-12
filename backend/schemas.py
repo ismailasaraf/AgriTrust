@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr, Field
-from typing import Optional
+from typing import Optional, Any, Dict
 from datetime import datetime
 from backend.models import LoanStatus
 
@@ -9,17 +9,9 @@ class FarmerBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
     phone: str = Field(..., min_length=10, max_length=20)
     email: Optional[EmailStr] = None
-    village: Optional[str] = None
     address: Optional[str] = None
-    farming_type: Optional[str] = None
     land_size_acres: Optional[float] = Field(None, ge=0)
-    land_details: Optional[str] = None
-    crop_type: Optional[str] = Field(None, max_length=255)
-    crops_cultivated: Optional[str] = None
-    approx_production: Optional[str] = None
-    fpo_membership: Optional[str] = None
-    previous_farming_history: Optional[str] = None
-    market_sold_to: Optional[str] = None
+    crop_type: Optional[str] = Field(None, max_length=100)
     organization_id: Optional[int] = None
 
 
@@ -31,38 +23,10 @@ class FarmerUpdate(BaseModel):
     name: Optional[str] = Field(None, min_length=1, max_length=255)
     phone: Optional[str] = Field(None, min_length=10, max_length=20)
     email: Optional[EmailStr] = None
-    village: Optional[str] = None
     address: Optional[str] = None
-    farming_type: Optional[str] = None
     land_size_acres: Optional[float] = Field(None, ge=0)
-    land_details: Optional[str] = None
-    crop_type: Optional[str] = Field(None, max_length=255)
-    crops_cultivated: Optional[str] = None
-    approx_production: Optional[str] = None
-    fpo_membership: Optional[str] = None
-    previous_farming_history: Optional[str] = None
-    market_sold_to: Optional[str] = None
+    crop_type: Optional[str] = Field(None, max_length=100)
     organization_id: Optional[int] = None
-
-
-class VoiceParseRequest(BaseModel):
-    transcript: str = Field(..., min_length=1)
-    language: Optional[str] = Field("en-US")
-
-
-class VoiceParseResponse(BaseModel):
-    name: Optional[str] = None
-    phone: Optional[str] = None
-    village: Optional[str] = None
-    farming_type: Optional[str] = None
-    land_size_acres: Optional[float] = None
-    land_details: Optional[str] = None
-    crops_cultivated: Optional[str] = None
-    approx_production: Optional[str] = None
-    fpo_membership: Optional[str] = None
-    previous_farming_history: Optional[str] = None
-    market_sold_to: Optional[str] = None
-    extracted_summary: Optional[str] = None
 
 
 class FarmerResponse(FarmerBase):
@@ -122,6 +86,7 @@ class LoanCreate(LoanBase):
 
 
 class LoanUpdate(BaseModel):
+    farmer_id: Optional[int] = None
     amount: Optional[float] = Field(None, gt=0)
     interest_rate: Optional[float] = Field(None, ge=0, le=100)
     duration_months: Optional[int] = Field(None, gt=0)
@@ -143,3 +108,51 @@ class LoanResponse(LoanBase):
 
     class Config:
         from_attributes = True
+
+
+# AI Assessment Schemas
+class AssessmentRequest(BaseModel):
+    farmer_id: int
+    loan_amount: float = Field(..., gt=0)
+    crop_type: str = Field(..., min_length=1, max_length=100)
+    land_size_acres: float = Field(..., gt=0)
+
+
+class AssessmentResponse(BaseModel):
+    id: int
+    farmer_id: int
+    loan_amount: float
+    crop_type: str
+    land_size_acres: float
+
+    # AI Data Sources
+    market_price_per_quintal: Optional[float]
+    rainfall_mm: Optional[float]
+    weather_risk_score: Optional[float]
+    insurance_risk_score: Optional[float]
+    disease_risk_score: Optional[float]
+
+    # AI Analysis
+    estimated_yield_quintals: Optional[float]
+    projected_revenue: Optional[float]
+    projected_profit: Optional[float]
+    projected_loss: Optional[float]
+    seasonal_risk: Optional[str]
+    credit_score: Optional[int]
+    recommendation: Optional[str]
+    ai_notes: Optional[str]
+
+    # Lifecycle
+    document_generated: bool
+    farmer_accepted: bool
+    farmer_accepted_at: Optional[datetime]
+    loan_id: Optional[int]
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class FarmerAcceptPayload(BaseModel):
+    assessment_id: int
